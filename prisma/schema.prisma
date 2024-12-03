@@ -1,0 +1,932 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DB_CONNECTION_STRING")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+
+model company {
+  id                              Int                               @id @default(autoincrement())
+  number                          String                            @db.VarChar(20)
+  name                            String                            @db.VarChar(100)
+  vatNumber                       String?                           @db.VarChar(45)
+  visitingAddress1                String?                           @db.VarChar(255)
+  visitingAddress2                String?                           @db.VarChar(255)
+  visitingPostCode                String?                           @db.VarChar(10)
+  visitingCity                    String?                           @db.VarChar(100)
+  visitingCountry                 String?                           @db.VarChar(100)
+  billingAddress1                 String?                           @db.VarChar(255)
+  billingAddress2                 String?                           @db.VarChar(255)
+  billingPostCode                 String?                           @db.VarChar(10)
+  billingCity                     String?                           @db.VarChar(100)
+  billingCountry                  String?                           @db.VarChar(100)
+  billingMethod                   company_billingMethod?
+  billingEmail                    String?                           @db.VarChar(255)
+  industry                        company_industry_choices?
+  notes                           String?                           @db.LongText
+  country                         String                            @db.VarChar(100)
+  company_industry                company_industry[]
+  department                      department[]
+  geo_client                      geo_client[]
+  geo_template                    geo_template[]
+  category                        category[]
+  row_template                    row_template[]
+  object_template                 object_template[]
+  control_folder_template         control_folder_template[]
+  tree_structure_template         tree_structure_template[]
+  project_template_category       project_template_category[]
+  project_row_template            project_row_template[]
+  project_object_template         project_object_template[]
+  project_control_folder_template project_control_folder_template[]
+}
+
+model geo_template {
+  id                  Int                   @id @default(autoincrement())
+  companyId           Int
+  name                String                @db.VarChar(255)
+  type                template_type
+  company             company?              @relation(fields: [companyId], references: [id])
+  geo_template_folder geo_template_folder[]
+}
+
+model geo_template_folder {
+  id            Int          @id @default(autoincrement())
+  geoTemplateId Int
+  parentId      Int?
+  name          String       @db.VarChar(255)
+  tag           String?      @db.VarChar(20)
+  geo_template  geo_template @relation(fields: [geoTemplateId], references: [id])
+}
+
+model company_industry {
+  id        Int                       @id @default(autoincrement())
+  companyId Int
+  industry  company_industry_industry
+  company   company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId], name: "companyId_fk_company_industry_idx")
+}
+
+model department {
+  id                     Int                      @id @default(autoincrement())
+  companyId              Int
+  name                   String                   @db.VarChar(100)
+  company                company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department_user_access department_user_access[]
+
+  @@index([companyId], name: "department_fk_company_idx")
+}
+
+model department_user_access {
+  id           Int        @id @default(autoincrement())
+  departmentId Int
+  userId       Int
+  department   department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  user         user       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([departmentId], name: "department_user_access_fk_department_idx")
+  @@index([userId], name: "department_user_access_fk_user_idx")
+}
+
+model drive_template {
+  id             Int     @id @default(autoincrement())
+  organisationId Int
+  template       String? @db.LongText
+}
+
+model geo_annotation {
+  id                 Int                  @id @default(autoincrement())
+  geoEstimateId      Int
+  fileId             Int?
+  controlFolderId    Int?
+  layerId            String?              @db.VarChar(20)
+  parentId           String?              @db.VarChar(40)
+  annotationId       String?              @unique @db.VarChar(40)
+  name               String?              @db.LongText
+  number             String?              @db.VarChar(255)
+  xfdf               String?              @db.LongText
+  type               String               @db.VarChar(20)
+  height             String?              @db.LongText
+  quantity           Float?               @default(1)
+  indexPosition      Int?
+  labels             String?              @db.LongText
+  geo_file           geo_file?            @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  geo_estimate       geo_estimate         @relation(fields: [geoEstimateId], references: [id], onDelete: Cascade)
+  geo_annotation_row geo_annotation_row[]
+
+  @@index([fileId], name: "fileID_idx")
+  @@index([geoEstimateId], name: "geoEstimateId_idx")
+}
+
+model geo_annotation_history {
+  id                  Int                           @id @default(autoincrement())
+  annotationId        Int
+  userId              Int
+  changeDate          DateTime                      @db.DateTime(0)
+  action              geo_annotation_history_action
+  pre_geoEstimatedId  Int?
+  pre_fileId          Int?
+  pre_layerId         String?                       @db.VarChar(20)
+  pre_parentId        String?                       @db.VarChar(40)
+  pre_annotationId    String?                       @db.VarChar(40)
+  pre_name            String?                       @db.VarChar(255)
+  pre_number          String?                       @db.VarChar(255)
+  pre_xfdf            String?                       @db.LongText
+  pre_type            String?                       @db.VarChar(20)
+  pre_height          String?                       @db.LongText
+  pre_quantity        Float?
+  post_geoEstimatedId Int?
+  post_fileId         Int?
+  post_layerId        String?                       @db.VarChar(20)
+  post_parentId       String?                       @db.VarChar(40)
+  post_annotationId   String?                       @db.VarChar(40)
+  post_name           String?                       @db.VarChar(255)
+  post_number         String?                       @db.VarChar(255)
+  post_xfdf           String?                       @db.LongText
+  post_type           String?                       @db.VarChar(20)
+  post_height         String?                       @db.LongText
+  post_quantity       Float?
+}
+
+model geo_annotation_row {
+  id                                         Int                                          @id @default(autoincrement())
+  geoAnnotationId                            Int
+  annotationRow                              String?                                      @db.LongText
+  geo_annotation                             geo_annotation                               @relation(fields: [geoAnnotationId], references: [id], onDelete: Cascade)
+  project_row_template_to_geo_annotation_row project_row_template_to_geo_annotation_row[]
+
+  @@index([geoAnnotationId], name: "geoAnnotationId_fx_idx")
+}
+
+model geo_client {
+  id                 Int                  @id @default(autoincrement())
+  companyId          Int
+  number             String               @db.VarChar(20)
+  name               String               @db.VarChar(100)
+  vatNumber          String?              @db.VarChar(45)
+  visitingAddress1   String?              @db.VarChar(255)
+  visitingAddress2   String?              @db.VarChar(255)
+  visitingPostCode   String?              @db.VarChar(10)
+  visitingCity       String?              @db.VarChar(100)
+  visitingCountry    String?              @db.VarChar(100)
+  billingAddress1    String?              @db.VarChar(255)
+  billingAddress2    String?              @db.VarChar(255)
+  billingPostCode    String?              @db.VarChar(10)
+  billingCity        String?              @db.VarChar(100)
+  billingCountry     String?              @db.VarChar(100)
+  company            company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  geo_client_contact geo_client_contact[]
+  geo_project        geo_project[]
+
+  @@index([companyId], name: "geo_client_fk_company_idx")
+}
+
+model geo_client_contact {
+  id                         Int                          @id @default(autoincrement())
+  geoClientId                Int
+  firstName                  String?                      @db.VarChar(100)
+  lastName                   String?                      @db.VarChar(100)
+  telephone                  String?                      @db.VarChar(20)
+  mobile                     String?                      @db.VarChar(20)
+  eMail                      String?                      @db.VarChar(255)
+  geo_client                 geo_client                   @relation(fields: [geoClientId], references: [id], onDelete: Cascade)
+  geo_project_client_contact geo_project_client_contact[]
+
+  @@index([geoClientId], name: "geo_client_contact_fk_geo_client_idx")
+}
+
+model geo_estimate {
+  id                              Int                               @id @default(autoincrement())
+  geoProjectId                    Int
+  name                            String?                           @db.VarChar(255)
+  locked                          Boolean                           @default(false)
+  geo_project                     geo_project                       @relation(fields: [geoProjectId], references: [id], onDelete: Cascade)
+  geo_annotation                  geo_annotation[]
+  geo_feature                     geo_feature[]
+  geo_scale                       geo_scale[]
+  project_template_category       project_template_category[]
+  project_row_template            project_row_template[]
+  project_object_template         project_object_template[]
+  project_control_folder_template project_control_folder_template[]
+
+  @@index([geoProjectId], name: "geo_estimate_fk_geo_project_idx")
+}
+
+model geo_feature {
+  id                Int               @id @default(autoincrement())
+  geoEstimateId     Int
+  parentId          Int?
+  fileId            Int?
+  page              Int?
+  geojson           String?           @db.LongText
+  type              String            @db.VarChar(100)
+  geo_file          geo_file?         @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  geo_estimate      geo_estimate      @relation(fields: [geoEstimateId], references: [id], onDelete: Cascade)
+  geo_feature       geo_feature?      @relation("geo_featureTogeo_feature_parentId", fields: [parentId], references: [id])
+  other_geo_feature geo_feature[]     @relation("geo_featureTogeo_feature_parentId")
+  geo_feature_row   geo_feature_row[]
+
+  @@index([geoEstimateId], name: "geo_feature_fk_geo_estimate_idx")
+  @@index([parentId], name: "geo_feature_fk_geo_feature_idx")
+  @@index([fileId], name: "geo_feature_fk_geo_file_idx")
+}
+
+model geo_feature_row {
+  id           Int          @id @default(autoincrement())
+  geoFeatureId Int?
+  rowNumber    Int?
+  segment      String?      @db.VarChar(255)
+  action       String?      @db.VarChar(255)
+  material     String?      @db.VarChar(255)
+  amount       String?      @db.VarChar(255)
+  pricePerUnit Float?
+  timePerUnit  Int?
+  geo_feature  geo_feature? @relation(fields: [geoFeatureId], references: [id], onDelete: Cascade)
+
+  @@index([geoFeatureId], name: "geo_feature_row_fk_geo_feature_idx")
+}
+
+model geo_file {
+  id               Int                  @id @default(autoincrement())
+  geoProjectId     Int
+  parentId         Int?
+  name             String?              @db.VarChar(255)
+  fileVersion      String?              @db.VarChar(5)
+  type             String?              @db.VarChar(100)
+  size             Int?
+  added            DateTime?            @db.DateTime(0)
+  pages            Int                  @default(0)
+  lastTiled        DateTime?            @db.DateTime(0)
+  description      String?              @db.LongText
+  shortDescription String?              @db.VarChar(100)
+  rotation         String?              @db.MediumText
+  converted        Boolean?             @default(false)
+  status           geo_file_status?
+  nodeStatus       geo_progress_status?
+  geo_project      geo_project          @relation(fields: [geoProjectId], references: [id], onDelete: Cascade)
+  geo_file         geo_file?            @relation("geo_fileTogeo_file_parentId", fields: [parentId], references: [id], onDelete: Cascade)
+  geo_annotation   geo_annotation[]
+  geo_feature      geo_feature[]
+  other_geo_file   geo_file[]           @relation("geo_fileTogeo_file_parentId")
+  geo_scale        geo_scale[]
+
+  @@index([geoProjectId], name: "geo_file_fk_geo-project_idx")
+  @@index([parentId], name: "geo_file_fk_geo_file_idx")
+}
+
+model geo_project {
+  id                               Int                                @id @default(autoincrement())
+  departmentId                     Int?
+  projectNumber                    String                             @db.VarChar(20)
+  name                             String                             @db.VarChar(255)
+  address1                         String?                            @db.VarChar(255)
+  address2                         String?                            @db.VarChar(255)
+  postCode                         String?                            @db.VarChar(10)
+  webhook                          String?                            @db.VarChar(255)
+  city                             String?                            @db.VarChar(100)
+  country                          String                             @db.VarChar(100)
+  deleted                          Boolean                            @default(false)
+  geoClientId                      Int?
+  projectLeaderId                  Int
+  currency                         String?                            @db.VarChar(50)
+  units                            geo_project_units                  @default(metric)
+  createdAt                        DateTime?                          @db.DateTime(0)
+  g5                               Boolean                            @default(false)
+  estimateOrder                    Json?
+  geo_client                       geo_client?                        @relation(fields: [geoClientId], references: [id])
+  geo_estimate                     geo_estimate[]
+  geo_file                         geo_file[]
+  geo_project_client_contact       geo_project_client_contact[]
+  geo_project_external_user_access geo_project_external_user_access[]
+  project_template_category        project_template_category[]
+  project_row_template             project_row_template[]
+  project_object_template          project_object_template[]
+  project_control_folder_template  project_control_folder_template[]
+
+  @@index([departmentId], name: "geo_project_fk_department_idx")
+  @@index([geoClientId], name: "geo_project_fk_geo_client_idx")
+  @@index([projectLeaderId], name: "geo_project_fk_user_idx")
+}
+
+model geo_project_client_contact {
+  id                 Int                @id @default(autoincrement())
+  geoProject         Int
+  geoClientContact   Int
+  geo_client_contact geo_client_contact @relation(fields: [geoClientContact], references: [id])
+  geo_project        geo_project        @relation(fields: [geoProject], references: [id])
+
+  @@index([geoClientContact], name: "geo_project_client_contact_fk_geo_client_contact_idx")
+  @@index([geoProject], name: "geo_project_client_contact_fk_geo_project_idx")
+}
+
+model geo_project_external_user_access {
+  id           Int         @id @default(autoincrement())
+  userId       Int
+  geoProjectId Int
+  readFrom     Boolean     @default(true)
+  writeTo      Boolean     @default(true)
+  geo_project  geo_project @relation(fields: [geoProjectId], references: [id])
+  user         user        @relation(fields: [userId], references: [id])
+
+  @@index([geoProjectId], name: "geo_project_external_user_access_fk_geo_project_idx")
+  @@index([userId], name: "geo_project_external_user_access_fk_user_idx")
+}
+
+model geo_scale {
+  id            Int          @id @default(autoincrement())
+  geoEstimateId Int
+  fileId        Int
+  page          Int
+  xdf           String       @db.LongText
+  type          String?      @db.VarChar(20)
+  length        String       @default("1") @db.VarChar(255)
+  labels        String?      @db.LongText
+  geo_file      geo_file     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  geo_estimate  geo_estimate @relation(fields: [geoEstimateId], references: [id], onDelete: Cascade)
+
+  @@index([fileId], name: "fileID_idx")
+  @@index([geoEstimateId], name: "geoEstimateId_idx")
+}
+
+model licenses {
+  id             Int              @id @default(autoincrement())
+  organisationId Int
+  userId         Int?
+  orderId        Int?
+  orderNumber    String?          @db.LongText
+  license        licenses_license
+  renewalDate    DateTime         @db.Date
+  role           licenses_role
+}
+
+model license_statistics_global {
+  id                               Int      @id @default(autoincrement())
+  statistics_date                  DateTime @db.DateTime(0)
+  days_licenses_30                 Int?     @default(0) @map("30_days_licenses")
+  days_licenses_90                 Int?     @default(0) @map("90_days_licenses")
+  days_licenses_365                Int?     @default(0) @map("365_days_licenses")
+  unlimited_licenses               Int?     @default(0)
+  trial_licenses                   Int?     @default(0)
+  trial_expired_licenses           Int?     @default(0)
+  cancelled_licenses               Int?     @default(0)
+  cancelled_expired_licenses       Int?     @default(0)
+  educational_licenses             Int?     @default(0)
+  other_licenses                   Int?     @default(0)
+  sales_licenses                   Int?     @default(0)
+  developer_licenses               Int?     @default(0)
+  days_licenses_sv_se_30           Int?     @default(0) @map("30_days_licenses_sv-se")
+  days_licenses_sv_se_90           Int?     @default(0) @map("90_days_licenses_sv-se")
+  days_licenses_sv_se_365          Int?     @default(0) @map("365_days_licenses_sv-se")
+  unlimited_licenses_sv_se         Int?     @default(0) @map("unlimited_licenses_sv-se")
+  trial_licenses_sv_se             Int?     @default(0) @map("trial_licenses_sv-se")
+  trial_expired_licenses_sv_se     Int?     @default(0) @map("trial_expired_licenses_sv-se")
+  cancelled_licenses_sv_se         Int?     @default(0) @map("cancelled_licenses_sv-se")
+  cancelled_expired_licenses_sv_se Int?     @default(0) @map("cancelled_expired_licenses_sv-se")
+  educational_licenses_sv_se       Int?     @default(0) @map("educational_licenses_sv-se")
+  other_licenses_sv_se             Int?     @default(0) @map("other_licenses_sv-se")
+  days_licenses_da_dk_30           Int?     @default(0) @map("30_days_licenses_da-dk")
+  days_licenses_da_dk_90           Int?     @default(0) @map("90_days_licenses_da-dk")
+  days_licenses_da_dk_365          Int?     @default(0) @map("365_days_licenses_da-dk")
+  unlimited_licenses_da_dk         Int?     @default(0) @map("unlimited_licenses_da-dk")
+  trial_licenses_da_dk             Int?     @default(0) @map("trial_licenses_da-dk")
+  trial_expired_licenses_da_dk     Int?     @default(0) @map("trial_expired_licenses_da-dk")
+  cancelled_licenses_da_dk         Int?     @default(0) @map("cancelled_licenses_da-dk")
+  cancelled_expired_licenses_da_dk Int?     @default(0) @map("cancelled_expired_licenses_da-dk")
+  educational_licenses_da_dk       Int?     @default(0) @map("educational_licenses_da-dk")
+  other_licenses_da_dk             Int?     @default(0) @map("other_licenses_da-dk")
+  days_licenses_fi_fi_30           Int?     @default(0) @map("30_days_licenses_fi-fi")
+  days_licenses_fi_fi_90           Int?     @default(0) @map("90_days_licenses_fi-fi")
+  days_licenses_fi_fi_365          Int?     @default(0) @map("365_days_licenses_fi-fi")
+  unlimited_licenses_fi_fi         Int?     @default(0) @map("unlimited_licenses_fi-fi")
+  trial_licenses_fi_fi             Int?     @default(0) @map("trial_licenses_fi-fi")
+  trial_expired_licenses_fi_fi     Int?     @default(0) @map("trial_expired_licenses_fi-fi")
+  cancelled_licenses_fi_fi         Int?     @default(0) @map("cancelled_licenses_fi-fi")
+  cancelled_expired_licenses_fi_fi Int?     @default(0) @map("cancelled_expired_licenses_fi-fi")
+  educational_licenses_fi_fi       Int?     @default(0) @map("educational_licenses_fi-fi")
+  other_licenses_fi_fi             Int?     @default(0) @map("other_licenses_fi-fi")
+  days_licenses_nb_no_30           Int?     @default(0) @map("30_days_licenses_nb-no")
+  days_licenses_nb_no_90           Int?     @default(0) @map("90_days_licenses_nb-no")
+  days_licenses_nb_no_365          Int?     @default(0) @map("365_days_licenses_nb-no")
+  unlimited_licenses_nb_no         Int?     @default(0) @map("unlimited_licenses_nb-no")
+  trial_licenses_nb_no             Int?     @default(0) @map("trial_licenses_nb-no")
+  trial_expired_licenses_nb_no     Int?     @default(0) @map("trial_expired_licenses_nb-no")
+  cancelled_licenses_nb_no         Int?     @default(0) @map("cancelled_licenses_nb-no")
+  cancelled_expired_licenses_nb_no Int?     @default(0) @map("cancelled_expired_licenses_nb-no")
+  educational_licenses_nb_no       Int?     @default(0) @map("educational_licenses_nb-no")
+  other_licenses_nb_no             Int?     @default(0) @map("other_licenses_nb-no")
+  days_licenses_nl_nl_30           Int?     @default(0) @map("30_days_licenses_nl-nl")
+  days_licenses_nl_nl_90           Int?     @default(0) @map("90_days_licenses_nl_nl")
+  days_licenses_nl_nl_365          Int?     @default(0) @map("365_days_licenses_nl-nl")
+  unlimited_licenses_nl_nl         Int?     @default(0) @map("unlimited_licenses_nl-nl")
+  trial_licenses_nl_nl             Int?     @default(0) @map("trial_licenses_nl-nl")
+  trial_expired_licenses_nl_nl     Int?     @default(0) @map("trial_expired_licenses_nl-nl")
+  cancelled_licenses_nl_nl         Int?     @default(0) @map("cancelled_licenses_nl-nl")
+  cancelled_expired_licenses_nl_nl Int?     @default(0) @map("cancelled_expired_licenses_nl-nl")
+  educational_licenses_nl_nl       Int?     @default(0) @map("educational_licenses_nl-nl")
+  other_licenses_nl_nl             Int?     @default(0) @map("other_licenses_nl-nl")
+  days_licenses_nl_be_30           Int?     @default(0) @map("30_days_licenses_nl-be")
+  days_licenses_nl_be_90           Int?     @default(0) @map("90_days_licenses_nl-be")
+  days_licenses_nl_be_365          Int?     @default(0) @map("365_days_licenses_nl-be")
+  unlimited_licenses_nl_be         Int?     @default(0) @map("unlimited_licenses_nl-be")
+  trial_licenses_nl_be             Int?     @default(0) @map("trial_licenses_nl-be")
+  trial_expired_licenses_nl_be     Int?     @default(0) @map("trial_expired_licenses_nl-be")
+  cancelled_licenses_nl_be         Int?     @default(0) @map("cancelled_licenses_nl-be")
+  cancelled_expired_licenses_nl_be Int?     @default(0) @map("cancelled_expired_licenses_nl-be")
+  educational_licenses_nl_be       Int?     @default(0) @map("educational_licenses_nl-be")
+  other_licenses_nl_be             Int?     @default(0) @map("other_licenses_nl-be")
+  days_licenses_en_gb_30           Int?     @default(0) @map("30_days_licenses_en-gb")
+  days_licenses_en_gb_90           Int?     @default(0) @map("90_days_licenses_en-gb")
+  days_licenses_en_gb_365          Int?     @default(0) @map("365_days_licenses_en-gb")
+  unlimited_licenses_en_gb         Int?     @default(0) @map("unlimited_licenses_en-gb")
+  trial_licenses_en_gb             Int?     @default(0) @map("trial_licenses_en-gb")
+  trial_expired_licenses_en_gb     Int?     @default(0) @map("trial_expired_licenses_en-gb")
+  cancelled_licenses_en_gb         Int?     @default(0) @map("cancelled_licenses_en-gb")
+  cancelled_expired_licenses_en_gb Int?     @default(0) @map("cancelled_expired_licenses_en-gb")
+  educational_licenses_en_gb       Int?     @default(0) @map("educational_licenses_en-gb")
+  other_licenses_en_gb             Int?     @default(0) @map("other_licenses_en-gb")
+  days_licenses_en_us_30           Int?     @default(0) @map("30_days_licenses_en-us")
+  days_licenses_en_us_90           Int?     @default(0) @map("90_days_licenses_en-us")
+  days_licenses_en_us_365          Int?     @default(0) @map("365_days_licenses_en-us")
+  unlimited_licenses_en_us         Int?     @default(0) @map("unlimited_licenses_en-us")
+  trial_licenses_en_us             Int?     @default(0) @map("trial_licenses_en-us")
+  trial_expired_licenses_en_us     Int?     @default(0) @map("trial_expired_licenses_en-us")
+  cancelled_licenses_en_us         Int?     @default(0) @map("cancelled_licenses_en-us")
+  cancelled_expired_licenses_en_us Int?     @default(0) @map("cancelled_expired_licenses_en-us")
+  educational_licenses_en_us       Int?     @default(0) @map("educational_licenses_en-us")
+  other_licenses_en_us             Int?     @default(0) @map("other_licenses_en-us")
+  days_licenses_en_gb_90_2         Int?     @default(0) @map("90_days_licenses_en_gb")
+  days_licenses_en_gb_365_2        Int?     @default(0) @map("365_days_licenses_en_gb")
+  trial_expired_licenses_en_gb_2   Int?     @default(0)
+  cancelled_licenses_en_gb_2       Int?     @default(0)
+  days_licenses_en_us_90_2         Int?     @default(0) @map("90_days_licenses_en_us")
+  days_licenses_en_us_365_2        Int?     @default(0) @map("365_days_licenses_en_us")
+  trial_expired_licenses_en_us_2   Int?     @default(0)
+  cancelled_licenses_en_us_2       Int?     @default(0)
+}
+
+model login {
+  id                     Int       @id @default(autoincrement())
+  userId                 Int       @unique
+  username               String    @unique @db.VarChar(255)
+  signature              String?   @db.LongText
+  theKey                 String?   @db.LongText
+  passwordHash           Bytes?    @db.Binary(64)
+  salt                   Bytes?    @db.Binary(64)
+  resetPasswordToken     String?   @db.VarChar(36)
+  resetPasswordTimestamp DateTime? @db.DateTime(0)
+  user                   user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "login_fk_user_idx")
+}
+
+model shield_login {
+  id              Int       @id @default(autoincrement())
+  username        String    @unique @db.VarChar(255)
+  passwordHash    Bytes?    @db.Binary(64)
+  salt            Bytes?    @db.Binary(64)
+  userId          Int
+  webToken        String?   @db.LongText
+  webTokenSign    String?   @db.LongText
+  lastEdited      DateTime  @default(now()) @db.DateTime(0)
+  lastEditedBy    Int
+  created         DateTime  @default(now()) @db.DateTime(0)
+  createdBy       Int
+  resetToken      Bytes?    @db.Binary(64)
+  resetExpiryDate DateTime? @db.DateTime(0)
+  superUser       Boolean   @default(false)
+  user            user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "shield_login_fk_user_idx")
+}
+
+model user {
+  id                                Int                                 @id @default(autoincrement())
+  companyId                         Int?
+  active                            Boolean                             @default(true)
+  firstName                         String                              @db.VarChar(100)
+  lastName                          String                              @db.VarChar(100)
+  telephone                         String?                             @db.VarChar(20)
+  mobile                            String?                             @db.VarChar(20)
+  eMail                             String                              @unique @db.VarChar(255)
+  firstRegistered                   DateTime?                           @default(now()) @db.DateTime(0)
+  loginReset                        DateTime?                           @db.DateTime(0)
+  lastLogin                         DateTime?                           @db.DateTime(0)
+  newsletter                        Boolean?                            @default(true)
+  importantInformation              Boolean?                            @default(true)
+  license                           user_license
+  licenseExpiryDate                 DateTime                            @db.Date
+  language                          String                              @db.VarChar(45)
+  contractNumber                    String?                             @db.VarChar(100)
+  orderNumber                       String?                             @db.VarChar(100)
+  licenseRole                       user_licenseRole?                   @default(creator)
+  notes                             String?                             @db.LongText
+  department_user_access            department_user_access[]
+  geo_project_external_user_access  geo_project_external_user_access[]
+  login                             login[]
+  shield_login                      shield_login[]
+  termsOfService                    Boolean                             @default(false)
+  userSettings                      Json?
+  user_favourite_row_template       user_favourite_row_template[]
+  user_favourite_object_template    user_favourite_object_template[]
+  user_favourite_control_folder     user_favourite_control_folder[]
+  user_favourite_structure_template user_favourite_structure_template[]
+
+  @@index([companyId], name: "user_fk_company_idx")
+}
+
+model geo_row_library {
+  id           Int                  @id @default(autoincrement())
+  userId       Int
+  status       geo_progress_status?
+  profession   String?              @db.VarChar(255)
+  phase        String?              @db.VarChar(255)
+  segment      String?              @db.VarChar(255)
+  rowAction    String?              @db.VarChar(255)
+  material     String?              @db.VarChar(255)
+  amount       String?              @db.VarChar(255)
+  unit         String?              @db.VarChar(20)
+  pricePerUnit String?              @db.VarChar(255)
+  timePerUnit  String?              @db.VarChar(255)
+}
+
+//Base Template Tables
+
+model category {
+  id                      Int                       @id @default(autoincrement())
+  type                    category_type
+  name                    String
+  companyId               Int
+  company                 company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  row_template            row_template[]
+  object_template         object_template[]
+  control_folder_template control_folder_template[]
+  tree_structure_template tree_structure_template[]
+}
+
+model row_template {
+  id                          Int                           @id @default(autoincrement())
+  categoryId                  Int
+  companyId                   Int
+  type                        String?                       @default("row")
+  properties                  Json
+  version                     String
+  locked                      Boolean                       @default(false)
+  category                    category?                     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  company                     company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  object_to_row_template      object_to_row_template[]
+  user_favourite_row_template user_favourite_row_template[]
+}
+
+model object_template {
+  id                             Int                              @id @default(autoincrement())
+  categoryId                     Int?
+  name                           String
+  companyId                      Int
+  type                           geo_object_type
+  properties                     Json
+  version                        String
+  locked                         Boolean                          @default(false)
+  category                       category?                        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  company                        company                          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  object_to_row_template         object_to_row_template[]
+  user_favourite_object_template user_favourite_object_template[]
+}
+
+model control_folder_template {
+  id                                Int                                 @id @default(autoincrement())
+  name                              String
+  categoryId                        Int?
+  companyId                         Int
+  type                              String?                             @default("control_folder")
+  pointTemplateId                   Int?
+  lineTemplateId                    Int?
+  polygonTemplateId                 Int?
+  ellipseTemplateId                 Int?
+  reductionTemplateId               Int?
+  drawTemplateId                    Int?
+  version                           String
+  locked                            Boolean                             @default(false)
+  category                          category?                           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  company                           company                             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tree_structure_to_folder_template tree_structure_to_folder_template[]
+  user_favourite_control_folder     user_favourite_control_folder[]
+}
+
+model tree_structure_template {
+  id                                Int                                 @id @default(autoincrement())
+  categoryId                        Int?
+  name                              String
+  companyId                         Int
+  type                              tree_structure_template_type
+  locked                            Boolean                             @default(false)
+  company                           company                             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category                          category?                           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tree_structure_to_folder_template tree_structure_to_folder_template[]
+  user_favourite_structure_template user_favourite_structure_template[]
+}
+
+model object_to_row_template {
+  id              Int             @id @default(autoincrement())
+  objTemplateId   Int
+  rowTemplateId   Int
+  object_template object_template @relation(fields: [objTemplateId], references: [id], onDelete: Cascade)
+  row_template    row_template    @relation(fields: [rowTemplateId], references: [id], onDelete: Cascade)
+}
+
+model tree_structure_to_folder_template {
+  id                      Int                      @id @default(autoincrement())
+  name                    String
+  treeStructureTemplateId Int
+  controlFolderTemplateId Int?
+  number                  String?
+  parentId                Int?
+  properties              Json?
+  version                 String?
+  tree_structure_template tree_structure_template  @relation(fields: [treeStructureTemplateId], references: [id], onDelete: Cascade)
+  control_folder_template control_folder_template? @relation(fields: [controlFolderTemplateId], references: [id], onDelete: Cascade)
+}
+
+// base template as favourite
+
+model user_favourite_row_template {
+  id                Int          @id @default(autoincrement())
+  userId            Int
+  baseRowTemplateId Int
+  user              user         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  row_template      row_template @relation(fields: [baseRowTemplateId], references: [id], onDelete: Cascade)
+}
+
+model user_favourite_object_template {
+  id                   Int             @id @default(autoincrement())
+  userId               Int
+  baseObjectTemplateId Int
+  user                 user            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  object_template      object_template @relation(fields: [baseObjectTemplateId], references: [id], onDelete: Cascade)
+}
+
+model user_favourite_control_folder {
+  id                          Int                      @id @default(autoincrement())
+  userId                      Int
+  baseControlFolderTemplateId Int
+  user                        user                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  control_folder_template     control_folder_template? @relation(fields: [baseControlFolderTemplateId], references: [id], onDelete: Cascade)
+}
+
+model user_favourite_structure_template {
+  id                      Int                     @id @default(autoincrement())
+  userId                  Int
+  baseStructureTemplateId Int
+  user                    user                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tree_structure_template tree_structure_template @relation(fields: [baseStructureTemplateId], references: [id], onDelete: Cascade)
+}
+
+//Project Base Template Tables
+
+model project_template_category {
+  id                              Int                               @id @default(autoincrement())
+  companyId                       Int
+  projectId                       Int
+  estimateId                      Int
+  type                            category_type
+  baseCategoryTemplateId          Int?
+  name                            String
+  company                         company                           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  project                         geo_project                       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  geoEstimate                     geo_estimate                      @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  project_row_template            project_row_template[]
+  project_object_template         project_object_template[]
+  project_control_folder_template project_control_folder_template[]
+}
+
+model project_row_template {
+  id                                         Int                                          @id @default(autoincrement())
+  companyId                                  Int
+  projectId                                  Int
+  estimateId                                 Int
+  projectCategoryId                          Int?
+  rowBaseTemplateId                          Int?
+  type                                       String?                                      @default("row")
+  properties                                 Json
+  version                                    String
+  company                                    company                                      @relation(fields: [companyId], references: [id])
+  project                                    geo_project                                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  geoEstimate                                geo_estimate                                 @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  project_template_category                  project_template_category?                   @relation(fields: [projectCategoryId], references: [id], onDelete: Cascade)
+  project_object_to_row_template             project_object_to_row_template[]
+  project_row_template_to_geo_annotation_row project_row_template_to_geo_annotation_row[]
+}
+
+model project_object_template {
+  id                             Int                              @id @default(autoincrement())
+  name                           String
+  companyId                      Int
+  projectId                      Int
+  estimateId                     Int
+  objectBaseTemplateId           Int?
+  projectCategoryId              Int?
+  type                           geo_object_type
+  properties                     Json
+  version                        String
+  project                        geo_project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  company                        company                          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  project_template_category      project_template_category?       @relation(fields: [projectCategoryId], references: [id], onDelete: Cascade)
+  geoEstimate                    geo_estimate                     @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  project_object_to_row_template project_object_to_row_template[]
+}
+
+model project_control_folder_template {
+  id                               Int                        @id @default(autoincrement())
+  name                             String
+  companyId                        Int
+  projectId                        Int
+  estimateId                       Int
+  projectCategoryId                Int?
+  controlFolderBaseTemplateId      Int?
+  pointProjectObjectTemplateId     Int?
+  lineProjectObjectTemplateId      Int?
+  polygonProjectObjectTemplateId   Int?
+  ellipseProjectObjectTemplateId   Int?
+  reductionProjectObjectTemplateId Int?
+  drawProjectObjectTemplateId      Int?
+  version                          String
+  type                             String?                    @default("control_folder")
+  project                          geo_project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  geoEstimate                      geo_estimate               @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  company                          company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  project_template_category        project_template_category? @relation(fields: [projectCategoryId], references: [id], onDelete: Cascade)
+}
+
+model project_object_to_row_template {
+  id                      Int                     @id @default(autoincrement())
+  projectObjectTemplateId Int
+  projectRowTemplateId    Int
+  project_row_template    project_row_template    @relation(fields: [projectRowTemplateId], references: [id], onDelete: Cascade)
+  project_object_template project_object_template @relation(fields: [projectObjectTemplateId], references: [id], onDelete: Cascade)
+}
+
+model project_row_template_to_geo_annotation_row {
+  id                   Int                  @id @default(autoincrement())
+  projecRowTemplateID  Int
+  geoAnnotationRowId   Int
+  geo_annotation_row   geo_annotation_row   @relation(fields: [geoAnnotationRowId], references: [id], onDelete: Cascade)
+  project_row_template project_row_template @relation(fields: [projecRowTemplateID], references: [id], onDelete: Cascade)
+}
+
+enum company_billingMethod {
+  epost
+  brev
+  efaktura
+}
+
+enum company_industry_choices {
+  Anl_ggning       @map("Anläggning")
+  Bygg
+  Byggvaruhandel
+  El
+  Fasad
+  Golvl_ggning     @map("Golvläggning")
+  Konsult
+  Markarbeten
+  Mattl_ggning     @map("Mattläggning")
+  M_leri           @map("Måleri")
+  Platts_ttning    @map("Plattsättning")
+  Rivning
+  St_d             @map("Städ")
+  Takl_ggning      @map("Takläggning")
+  Undertak
+  Utbildning
+  VVS_Installation @map("VVS/Installation")
+  vrigt            @map("Övrigt")
+}
+
+enum company_industry_industry {
+  Anl_ggning     @map("Anläggning")
+  Bygg
+  Byggvaruhandel
+  El
+  Fasad
+  Golv
+  Konsult
+  Mark
+  Mattl_ggning   @map("Mattläggning")
+  M_leri         @map("Måleri")
+  Platts_ttning  @map("Plattsättning")
+  Rivning
+  St_d           @map("Städ")
+  Tak
+  Undertak
+  Utbildning
+  VVS
+  vrigt          @map("Övrigt")
+}
+
+enum geo_annotation_history_action {
+  INSERT
+  UPDATE
+  DELETE
+}
+
+enum geo_file_status {
+  uploaded
+  converted
+  upload_failed
+  conversion_failed
+}
+
+enum geo_progress_status {
+  notStarted
+  progress
+  review
+  complete
+}
+
+enum geo_project_currency {
+  SEK
+  DKK
+  NOK
+  EUR
+  USD
+  GBP
+  AFN
+}
+
+enum geo_project_units {
+  metric
+  imperial
+}
+
+enum licenses_license {
+  trial
+  trial_expired @map("trial-expired")
+  days_30       @map("30-days")
+  days_90       @map("90-days")
+  days_365      @map("365-days")
+  developer
+  sales
+  educational
+  other
+  cancelled
+  unlimited
+}
+
+enum licenses_role {
+  creator
+  viewer
+}
+
+enum user_license {
+  trial
+  trial_expired     @map("trial-expired")
+  days_30           @map("30-days")
+  days_90           @map("90-days")
+  days_365          @map("365-days")
+  developer
+  sales
+  educational
+  other
+  cancelled
+  cancelled_expired @map("cancelled-expired")
+  unlimited
+}
+
+enum user_licenseRole {
+  creator
+  viewer
+}
+
+enum template_type {
+  row
+  ellipse
+  polygon
+  draw
+  reduction
+  point
+  line
+  control_folder
+  drive
+  calculate
+}
+
+enum category_type {
+  control_folder
+  object
+  row
+  tree
+}
+
+enum tree_structure_template_type {
+  drive
+  calculate
+}
+
+enum geo_object_type {
+  ellipse
+  polygon
+  draw
+  reduction
+  point
+  line
+}
