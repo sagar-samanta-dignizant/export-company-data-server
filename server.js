@@ -144,6 +144,6 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(process.env.API_PORT || 3001, () => {
-    console.log(`Server is running on port ${process.env.API_PORT || 3001}`);
+server.listen(process.env.API_PORT || 8080, () => {
+    console.log(`Server is running on port ${process.env.API_PORT || 8080}`);
 });
